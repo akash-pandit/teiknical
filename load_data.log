@@ -1,0 +1,4 @@
+INFO:load_data.py:Parsing input file
+INFO:load_data.py:Writing to table samples in cell-count.db
+INFO:load_data.py:Writing to table subjects in cell-count.db
+INFO:load_data.py:Done
