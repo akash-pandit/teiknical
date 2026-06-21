@@ -12,7 +12,7 @@ logger = logging.getLogger(Path(__file__).name)
 
 # I/O constants
 INPUT_FILE = Path("cell-count.csv")
-LOGFILE = Path("load_data.log")
+LOGFILE = Path("logs/load_data.log")
 DB_FILENAME = "cell-count.db"
 
 # DB constants
