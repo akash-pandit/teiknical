@@ -11,7 +11,7 @@ pipeline: setup
 	rm -f load_data.log
 	uv run load_data.py
 
-	@echo pipeline wip (pt1 done, pts2-4 tbd)
+	@echo "pipeline wip (pt1 done, pts2-4 tbd)"
 
 dashboard: pipeline
 	@echo dashboard tbd
