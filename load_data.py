@@ -2,10 +2,11 @@
 
 import adbc_driver_sqlite.dbapi as sqlite_adbc
 import logging
-from pathlib import Path
 import polars as pl
 
 from adbc_driver_sqlite.dbapi import Connection
+from pathlib import Path
+from sys import exit as sysexit
 
 logger = logging.getLogger(Path(__file__).name)
 
@@ -92,6 +93,9 @@ def init_db_connection(uri: str, constraint_fields: list[str]) -> Connection:
 
 def main() -> None:
     logger.info("Parsing input file")
+
+    # parse input data into data tables (to be sqlite tables)
+
     lf = pl.scan_csv(source=INPUT_FILE, separator=",")
 
     samples_iter = (
@@ -106,43 +110,54 @@ def main() -> None:
         .collect_batches()
     )
 
+    # set up constraint field tables
+
     conn = init_db_connection(uri=DB_FILENAME, constraint_fields=CONSTRAINT_FIELDS)
 
-    # set up constraint field tables
     for field in CONSTRAINT_FIELDS:
-        _ = (
+        values = (
             lf.select(field)  # pyright: ignore[reportUnknownMemberType]
             .unique()
             .rename({field: "name"})
             .collect()
-            .write_database(
-                table_name=f"{field}_ref",
+            .get_column("name")
+            .to_list()
+        )
+        cur = conn.cursor()
+        cur.executemany(  # pyright: ignore[reportUnknownMemberType]
+            f"INSERT OR IGNORE INTO {field}_ref (name) VALUES (?);",
+            [(v,) for v in values],  # pyright: ignore[reportAny]
+        )
+        cur.close()
+    conn.commit()
+
+    # set up data tables
+
+    data_tables = {"samples": samples_iter, "subjects": subjects_iter}
+
+    for table_name, table_iter in data_tables.items():
+        logger.info(f"Writing to table {table_name} in {DB_FILENAME}")
+
+        cur = conn.cursor()
+        _ = cur.execute(f"DROP TABLE IF EXISTS {table_name};")  # pyright: ignore[reportUnknownMemberType]
+        conn.commit()
+
+        for table_batch in table_iter:
+            _ = table_batch.write_database(  # pyright: ignore[reportUnknownMemberType]
+                table_name=table_name,
                 connection=conn,
                 if_table_exists="append",
                 engine="adbc",
             )
-        )
-
-    logger.info(f"Writing samples to {DB_FILENAME}")
-    for samples_batch in samples_iter:
-        _ = samples_batch.write_database(  # pyright: ignore[reportUnknownMemberType]
-            table_name="samples",
-            connection=conn,
-            if_table_exists="append",
-            engine="adbc",
-        )
-
-    logger.info(f"Writing subjects to {DB_FILENAME}")
-    for subjects_batch in subjects_iter:
-        _ = subjects_batch.write_database(  # pyright: ignore[reportUnknownMemberType]
-            table_name="subjects",
-            connection=conn,
-            if_table_exists="append",
-            engine="adbc",
-        )
 
 
 if __name__ == "__main__":
     logging.basicConfig(filename=LOGFILE, level=logging.INFO)
+
+    if not INPUT_FILE.is_file():
+        errmsg = f"Cannot find input file {INPUT_FILE.name}, exiting..."
+        logger.fatal(errmsg)
+        sysexit(errmsg)
+
     main()
     logger.info("Done")
