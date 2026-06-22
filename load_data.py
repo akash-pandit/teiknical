@@ -1,5 +1,59 @@
 #!/usr/bin/env python
 
+"""
+load_data.py
+
+Reads a file `cell-count.csv` in the project root directory and parses it into a SQLite database.
+
+cell-count.csv schema:
+- project: str, like prj*
+- subject: str, like sbj*
+- condition: str, in ['melanoma', 'carcinoma', 'healthy']
+- age: unsigned int
+- sex: str, in ['M', 'F']
+- treatment: str, in ['miraclib', 'phauximab', 'none']
+- response: str | None, in ['yes', 'no', None]
+- sample: str, like sample*
+- sample_type: str, in ['PBMC', 'WB']
+- time_from_treatment_start: int, in [0, 7, 14]
+- b_cell: unsigned int
+- cd8_t_cell: unsigned int
+- cd4_t_cell: unsigned int
+- nk_cell: unsigned int
+- monocyte: unsigned int
+
+Resulting sqlite schema:
+
+table condition_ref
+- name, text, primary key
+
+table treatment_ref
+- name, text, primary key
+
+table sample_type_ref
+- name, text, primary key
+
+table subjects:
+- subject, text, primary key like sbj*
+- project, text, non-null like prj*
+- condition, text, references table column condition_ref(name)
+- age, int, non-null >=0
+- sex, text, non-null in ['M', 'F', 'unknown']
+- treatment, text, references table column treatment_ref(name)
+- response, text, if treatment not 'none' then in ['yes', 'no'] else null
+
+table samples:
+- sample, text, primary key like sample*
+- subject, text, references table column subjects(subject)
+- sample_type, text, references table column sample_type_ref(name)
+- time_from_treatment_start, int, non-null >= 0
+- b_cell, int, non-null >= 0
+- cd8_t_cell, int, non-null >= 0
+- cd4_t_cell, int, non-null >= 0
+- nk_cell, int, non-null >= 0
+- monocyte, int, non-null >= 0
+"""
+
 import adbc_driver_sqlite.dbapi as sqlite_adbc
 import logging
 import polars as pl
