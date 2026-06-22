@@ -17,9 +17,9 @@ def get_cell_counts(db_uri: str) -> pl.DataFrame:
     ON 
         smpl.subject = sbj.subject
     WHERE 
-        sbj.condition = "melanoma"
-        AND sbj.treatment = "miraclib"
-        AND smpl.sample_type = "PBMC"
+        sbj.condition = 'melanoma'
+        AND sbj.treatment = 'miraclib'
+        AND smpl.sample_type = 'PBMC'
     """
     treatments = pl.read_database_uri(query=query, uri=db_uri, engine="adbc")
     return pl.read_parquet(
@@ -35,6 +35,7 @@ def generate_plot(df: pl.DataFrame, cell_type: str):
         " ".join([w.capitalize() for w in cell_type.split("_")])
         .replace("Cd", "CD")
         .replace("T C", "T-C")
+        .replace("Nk", "NK")
     )
 
     fig = px.box(  # pyright: ignore[reportUnknownMemberType]
@@ -111,6 +112,13 @@ def main():
     stats = compute_statistics(df, cell_types)
 
     stats.write_csv("outputs/3-stats.csv")
+
+    sig_stats = stats.filter(pl.col("p_adj") <= 0.05)
+
+    sig_stats.write_csv("outputs/3-sig-stats.csv")
+
+    print("Statistically significant samples via Benjamini-Hochberg adjusted p-values (p <= 0.05) for miraclib-treated melanoma patients:")
+    print(sig_stats)
 
 
 if __name__ == "__main__":
