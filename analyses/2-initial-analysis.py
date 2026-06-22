@@ -15,12 +15,12 @@ def main():
     FROM samples
     """
 
-    lf = pl.read_database_uri(
+    raw_lf = pl.read_database_uri(
         query=query, uri="sqlite:///cell-count.db", engine="adbc"
     ).lazy()
 
     lf = (
-        lf.with_columns(total_count=pl.sum_horizontal(*cell_types))
+        raw_lf.with_columns(total_count=pl.sum_horizontal(*cell_types))
         .with_columns([pl.col(name=col) * 100 / pl.col(name="total_count") for col in cell_types])
         .unpivot(
             index=["sample", "total_count"],
@@ -29,7 +29,7 @@ def main():
             on=cell_types,
         )
         .join(
-            other=lf.unpivot(
+            other=raw_lf.unpivot(
                 index="sample",
                 variable_name="population",
                 value_name="count",
@@ -42,6 +42,9 @@ def main():
     )
 
     df = lf.collect()
+    assert df.get_column("total_count").gt(0).all(), "found sample(s) with total_count <= 0"
+
+    print(df)
     df.write_parquet(file=OUTFILE, mkdir=True)
     df.write_csv(OUTFILE.with_suffix(suffix=".csv"))
 
