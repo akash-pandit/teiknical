@@ -20,16 +20,16 @@ def main():
     ).lazy()
 
     lf = (
-        lf.with_columns(total_count=pl.sum_horizontal(*cell_types))  # pyright: ignore[reportUnknownMemberType]
-        .with_columns([pl.col(col) * 100 / pl.col("total_count") for col in cell_types])
+        lf.with_columns(total_count=pl.sum_horizontal(*cell_types))
+        .with_columns([pl.col(name=col) * 100 / pl.col(name="total_count") for col in cell_types])
         .unpivot(
             index=["sample", "total_count"],
             variable_name="population",
             value_name="percentage",
-            on=list(cell_types),
+            on=cell_types,
         )
         .join(
-            lf.unpivot(
+            other=lf.unpivot(
                 index="sample",
                 variable_name="population",
                 value_name="count",
@@ -38,12 +38,12 @@ def main():
             on=["sample", "population"],
         )
         .select(["sample", "total_count", "population", "count", "percentage"])
-        .sort("sample")
+        .sort(by="sample")
     )
 
     df = lf.collect()
     df.write_parquet(file=OUTFILE, mkdir=True)
-    df.write_csv(OUTFILE.with_suffix(".csv"))
+    df.write_csv(OUTFILE.with_suffix(suffix=".csv"))
 
 
 if __name__ == "__main__":
