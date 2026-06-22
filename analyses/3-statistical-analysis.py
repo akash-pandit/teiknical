@@ -57,7 +57,7 @@ def generate_plot(df: pl.DataFrame, cell_type: str):
 
 def compute_statistics(
     df: pl.DataFrame, cell_types: list[str]
-) -> tuple[pl.DataFrame, pl.DataFrame]:
+) -> pl.DataFrame:
     resp_col = pl.col("response")
     ct_col = pl.col("population")
     t_col = pl.col("time_from_treatment_start")
@@ -66,7 +66,7 @@ def compute_statistics(
         df.get_column("time_from_treatment_start").unique().to_list()
     )
 
-    raw_pvalues: dict[str, list[float]] = {ct: [] for ct in cell_types}
+    records = []
 
     for ct in cell_types:
         df_ct = df.filter(ct_col == ct)
@@ -82,44 +82,35 @@ def compute_statistics(
                 .to_numpy()
             )
             mwu_res = mannwhitneyu(data_no_resp, data_yes_resp)
-            raw_pvalues[ct].append(float(mwu_res.pvalue))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportAttributeAccessIssue]
+            records.append(  # pyright: ignore[reportUnknownMemberType]
+                {
+                    "population": ct,
+                    "time_from_treatment_start": t,
+                    "p_value": float(mwu_res.pvalue),  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportAttributeAccessIssue]
+                }
+            )
 
-    raw_df = pl.DataFrame(raw_pvalues).with_columns(
-        time_from_treatment_start=pl.Series(timepoints)
+    results_df = pl.DataFrame(records)  # pyright: ignore[reportUnknownArgumentType]
+
+    _, adjusted, _, _ = multipletests(  # pyright: ignore[reportUnknownVariableType, reportAny]
+        results_df.get_column("p_value").to_numpy(), method="fdr_bh", alpha=0.05
     )
 
-    # flatten all p-values across cell types + timepoints for a single FDR correction pass
-    flat_pvals = [p for ct in cell_types for p in raw_pvalues[ct]]
-    _, adjusted_flat, _, _ = multipletests(flat_pvals, method="fdr_bh", alpha=0.05)  # pyright: ignore[reportUnknownVariableType, reportAny]
-
-    # reshape back into per-cell-type lists, same order as raw_pvalues was built
-    adjusted_pvalues: dict[str, list[float]] = {ct: [] for ct in cell_types}
-    idx = 0
-    for ct in cell_types:
-        n = len(timepoints)
-        adjusted_pvalues[ct] = list(adjusted_flat[idx : idx + n])  # pyright: ignore[reportUnknownArgumentType]
-        idx += n
-
-    adj_df = pl.DataFrame(adjusted_pvalues).with_columns(
-        time_from_treatment_start=pl.Series(timepoints)
-    )
-
-    return raw_df, adj_df
+    return results_df.with_columns(p_adj=pl.Series(adjusted))  # pyright: ignore[reportUnknownArgumentType]
 
 
 def main():
     DB_URI = "sqlite:///cell-count.db"
     cell_types = ["b_cell", "cd8_t_cell", "cd4_t_cell", "nk_cell", "monocyte"]
-    
+
     df = get_cell_counts(db_uri=DB_URI)
 
     for cell_type in cell_types:
         _ = generate_plot(df, cell_type)
 
-    raw, adj = compute_statistics(df, cell_types)
+    stats = compute_statistics(df, cell_types)
 
-    raw.write_csv("outputs/3-stats-raw.csv")
-    adj.write_csv("outputs/3-stats-adj.csv")
+    stats.write_csv("outputs/3-stats.csv")
 
 
 if __name__ == "__main__":
