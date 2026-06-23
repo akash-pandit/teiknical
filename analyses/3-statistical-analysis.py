@@ -52,13 +52,13 @@ def generate_plot(df: pl.DataFrame, cell_type: str):
         # points="all",  #
     )
 
-    fig.write_html(f"outputs/3-boxplot-{cell_type.replace('_', '-')}.html")  # pyright: ignore[reportUnknownMemberType]
+    fig.write_json(  # pyright: ignore[reportUnknownMemberType]
+        f"outputs/3-boxplot-{cell_type.replace('_', '-')}.json", engine="orjson"
+    )
     return fig
 
 
-def compute_statistics(
-    df: pl.DataFrame, cell_types: list[str]
-) -> pl.DataFrame:
+def compute_statistics(df: pl.DataFrame, cell_types: list[str]) -> pl.DataFrame:
     resp_col = pl.col("response")
     ct_col = pl.col("population")
     t_col = pl.col("time_from_treatment_start")
@@ -117,7 +117,9 @@ def main():
 
     sig_stats.write_csv("outputs/3-sig-stats.csv")
 
-    print("Statistically significant samples via Benjamini-Hochberg adjusted p-values (p <= 0.05) for miraclib-treated melanoma patients:")
+    print(
+        "Statistically significant samples via Benjamini-Hochberg adjusted p-values (p <= 0.05) for miraclib-treated melanoma patients:"
+    )
     print(sig_stats)
 
 

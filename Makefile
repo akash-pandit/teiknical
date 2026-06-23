@@ -8,10 +8,13 @@ endif
 	uv sync
 
 pipeline: setup
-	rm -f load_data.log
+	rm -f logs/*.log
 	uv run load_data.py
+	uv run analyses/2-initial-analysis.py
+	uv run analyses/3-statistical-analysis.py
+	uv run analyses/4-data-subset-analysis.py
 
-	@echo "pipeline wip (pt1 done, pts2-4 tbd)"
-
-dashboard: pipeline
-	@echo dashboard tbd
+dashboard:
+	@mkdir -p ~/.streamlit
+	@echo -e '[general]\nemail = ""' > ~/.streamlit/credentials.toml
+	uv run streamlit run app.py
