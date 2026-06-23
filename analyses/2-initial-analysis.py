@@ -46,7 +46,7 @@ def main():
 
     print(df)
     df.write_parquet(file=OUTFILE, mkdir=True)
-    df.write_csv(OUTFILE.with_suffix(suffix=".csv"))
+    # df.write_csv(OUTFILE.with_suffix(suffix=".csv"))
 
 
 if __name__ == "__main__":
