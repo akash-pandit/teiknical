@@ -1,6 +1,21 @@
 # Teiknical Submission
 
-Akash Pandit's submission for Teiko's technical assessment for their Bioinformatics Engineer position
+Akash Pandit's submission for Teiko's technical assessment for their Bioinformatics Engineer position.
+
+**Table of Contents**
+- [Quickstart](#quickstart)
+    - [Dashboard Link](#dashboard-link)
+- [Data Table Schemas](#data-table-schemas)
+    - [Subjects](#subjects)
+    - [Samples](#samples)
+    - [Reference Tables](#reference-tables)
+- [Code Overview](#code-overview)
+    - [Repository Structure](#repository-structure)
+    - [Part 1: Data Loading](#part-1-data-loading)
+    - [Part 2: Initial Analysis](#part-2-initial-analysis)
+    - [Part 3: Statistical Analysis](#part-3-statistical-analysis)
+    - [Part 4: Subset Analysis](#part-4-subset-analysis)
+    - [Interactive Dashboard](#interactive-dashboard)
 
 ## Quickstart
 
@@ -11,8 +26,10 @@ make pipeline  # runs parts 1 through 4 of the assessment in sequence
 
 make dashboard  # starts dashboard
 ```
+### Dashboard Link
 
-## Reference Tables
+After running `make dashboard`, the dashboard should automatically open in your default browser. If not, navigate to [`http://localhost:8501`](http://localhost:8501) while `make dashboard` is running.
+
 
 ## Data Table Schemas
 
@@ -56,8 +73,32 @@ On scaling, splitting subjects and samples minimizes redundant information (Subj
 
 ## Code Overview
 
+### Repository Structure
+
+`load_data.py` was kept in the root directory by project specification, and `app.py` followed suit. Analysis scripts were separated out to their own directory for organization and prepended with which part they addressed (e.g. Part 2 -> `2-initial-analysis.py`). Analysis output files/figures were saved in `outputs/`. As they are all rendered by the dashboard, `outputs/` also serves as a data/assets directory for said dashboard. 
+
+As each analysis step could efficiently run in-sequence without any need for parallelization (other than what polars' and SQLite's engines provide), each part was contained to its own python script, each run in-line. Resulting tables were written to standard output in pipeline execution and saved as csvs/parquet files for dashboard rendering.
+
 ### Part 1: Data Loading
 
 The initial data loading script was designed with speed in mind, using polars with the Arrow Database Connection backend. Unlike pandas, polars provides native multithreading support and a strict type system which pays dividends in speed and efficiency. For arbitrarily large input files, polars lazy loading (LazyFrames) and chunking prevent out-of-memory errors (actually pretty helpful for my 8GB RAM laptop) in both reading and writing. 
 
-### Part 2: 
+### Part 2: Initial Analysis
+
+Initial analysis makes use of polars' LazyFrames for efficient transformations and writes to a parquet file for efficient storage and quick rendering by the dashboard. 
+
+### Part 3: Statistical Analysis
+
+Part 3 is the heavyweight of this analysis. Comparisons were done between responder groups given both a particular cell population and time since treatment. Mixing observations by day, especially with sampling times each separated by a week, would have otherwise introduced a serious confounder. Time observations are intuitive to compare given a cell type, thus the yes/no comparisons for each time point were left on the same figure, where different figures can be selected via cell type dropdown to prevent visual clutter.
+
+Even with hundreds of samples per compared condition, significance tests were performed with a Mann-Whitney U Test as sampling distribution means could still cluster against the set 0 or 100% boundaries, and is similar enough in power to a Student's T-Test to avoid statistical power-based concerns.
+
+Figures were generated as plotly-based JSON files to easily render in the dashboard and provide interactivity (hovering over a boxplot to see the IQR and other median-based statistics, zooming in to specific regions, etc.), while also enabling dashboard viewers to save a figure as a png.
+
+### Part 4: Subset Analysis
+
+Part 4 queries the database generated in Part 1 to render all PBMC samples taken at baseline (t=0) from miraclib-treated melanoma patients via polars, with results saved to a csv. Further queries are performed through polars and also saved to csvs for dashboard rendering.
+
+### Interactive Dashboard
+
+The dashboard (`app.py`) is built on Streamlit, a lightweight Python framework designed specifically to generate dashboards and data-based web apps. Each part is split into its own tab on the dashboard, with interactive tables and plotly figures.
