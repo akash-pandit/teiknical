@@ -10,7 +10,7 @@ Akash Pandit's submission for Teiko's technical assessment for their Bioinformat
     - [Samples](#samples)
     - [Reference Tables](#reference-tables)
 - [Code Overview](#code-overview)
-    - [Repository Structure](#repository-structure)
+    - [Project Structure](#project-structure)
     - [Part 1: Data Loading](#part-1-data-loading)
     - [Part 2: Initial Analysis](#part-2-initial-analysis)
     - [Part 3: Statistical Analysis](#part-3-statistical-analysis)
@@ -73,11 +73,13 @@ On scaling, splitting subjects and samples minimizes redundant information (Subj
 
 ## Code Overview
 
-### Repository Structure
+### Project Structure
 
 `load_data.py` was kept in the root directory by project specification, and `app.py` followed suit. Analysis scripts were separated out to their own directory for organization and prepended with which part they addressed (e.g. Part 2 -> `2-initial-analysis.py`). Analysis output files/figures were saved in `outputs/`. As they are all rendered by the dashboard, `outputs/` also serves as a data/assets directory for said dashboard. 
 
 As each analysis step could efficiently run in-sequence without any need for parallelization (other than what polars' and SQLite's engines provide), each part was contained to its own python script, each run in-line. Resulting tables were written to standard output in pipeline execution and saved as csvs/parquet files for dashboard rendering.
+
+Environment management was done with `uv` for its speed and ease-of-use in environment construction and recapitulation, and a personal preference for strict environments tied to a specific project/repository (instead of a user like conda).
 
 ### Part 1: Data Loading
 
