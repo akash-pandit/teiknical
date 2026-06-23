@@ -21,7 +21,7 @@ CELL_TYPE_LABELS = {
 
 def main():
     st.set_page_config(page_title="Teiko OA", layout="wide")
-    _ = st.title("Miraclib Melanoma Trial — Cell Count Analysis")
+    _ = st.title("Loblaw Bio Clinical Trial Data")
 
     tab_overview, tab_stats, tab_subset = st.tabs(
         ["Initial Analysis", "Statistical Analysis", "Subset Analysis"]
@@ -112,12 +112,15 @@ def main():
 
     with tab_subset:
         _ = st.header("Data Subset Analysis")
-        _ = st.text("")
+        _ = st.text("All PBMC samples taken at baseline (t=0) from miraclib-treated melanoma patients.")
 
         main_subset_df = load_csv(OUTDIR / "4-baseline-pbmc-miraclib-melanoma.csv")
         _ = st.dataframe(main_subset_df, width="stretch")
 
-        _ = st.caption("The below tables were generated from the above subset")
+        _ = st.caption(
+                "The below tables were generated from the above subset. " +
+                "Any missing categories did not appear in the main subset."
+        )
 
         per_proj_col, by_resp_col, by_sex_col = st.columns(3)
 
