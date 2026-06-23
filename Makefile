@@ -15,6 +15,4 @@ pipeline: setup
 	uv run analyses/4-data-subset-analysis.py
 
 dashboard:
-	@mkdir -p ~/.streamlit
-	@echo -e '[general]\nemail = ""' > ~/.streamlit/credentials.toml
-	uv run streamlit run app.py
+	echo "" | uv run streamlit run app.py
